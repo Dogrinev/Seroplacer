@@ -1,11 +1,13 @@
 Package: Seroplacer
 Type: Package
-Title: What the Package Does (Title Case)
+Title: Bacterial Serovar Prediction Tool
 Version: 0.1.0
-Author: Who wrote it
-Maintainer: The package maintainer <yourself@somewhere.net>
-Description: More about what it does (maybe more than one line)
-    Use four spaces when indenting paragraphs within the Description.
-License: What license is it under?
+Author: Dmitry Grinevich, Benjamin Callahan
+Maintainer: Dmitry Grinevich <dogrinev@ncsu.edu>
+Description: Bacterial serovar prediction from amplicon sequencing data. 
+    Takes user-submitted ASVs from either E. coli or Salmonella and generates
+    a serovar prediction using a modified phylogenetic placement approach.
+License: GPL-3
 Encoding: UTF-8
 LazyData: true
+RoxygenNote: 7.1.2
