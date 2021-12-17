@@ -18,7 +18,7 @@ part of the Seroplacer package.}
 \item{Root}{An integer value for the root node of the phylogenetic tree.}
 
 \item{Dist_Table}{A table of pairwise distances between all pairs of nodes in the phylogenetic tree. Calculated from
-dist.nodes {ape}.}
+dist.nodes (ape).}
 }
 \value{
 An integer value representing either the distal or proximal node adjacent to the node inserted by the

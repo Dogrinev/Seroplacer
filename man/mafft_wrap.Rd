@@ -4,14 +4,13 @@
 \alias{mafft_wrap}
 \title{Wrapper Function for MAFFT}
 \usage{
-mafft_wrap(x, y, exec, options, file, add)
+mafft_wrap(Reference, Query, exec, options, file, add)
 }
 \arguments{
-\item{x}{A FASTA file containing the appropriate organism's multiple sequence alignment. These are pre-built and
-provided with the package, and the correct one must be selected. The user's query will be aligned matching this
-multiple sequence alignment.}
+\item{Reference}{An organism name (currently accepts "Salmonella" or "E.coli") which lets the function know
+which reference file to select. The reference sequence files are provided as part of the package.}
 
-\item{y}{A set of amplicon sequencing variants (ASVs) representing the 7 16S alleles. These are the query sequences
+\item{Query}{A set of amplicon sequencing variants (ASVs) representing the 7 16S alleles. These are the query sequences
 which will be aligned to the multiple sequence alignment in x.}
 
 \item{exec}{(Optional) The path on the machine in which the MAFFT program is installed. This path will default to
@@ -26,7 +25,7 @@ output the resulting FASTA as an R environment object.}
 
 \item{add}{Attaches the --add argument to the MAFFT command, setting the program to append the user's query sequences
 to the provided reference multiple sequence alignment. This command is required for merging the query sequences into
-the reference FASTA file.}
+the reference FASTA file. If left blank this will by default use the --add argument.}
 }
 \value{
 A multiple sequence alignment in FASTA format containing the reference sequences and the aligned query
@@ -45,5 +44,5 @@ This wrapper is not currently designed to include all options contained in MAFFT
 a specific set of parameters to be used.
 }
 \examples{
-Output_FASTA<-mafft_wrap(x = Full_Alignment.fasta, y = Query.fasta, options = "--keeplength")
+Output_FASTA<-mafft_wrap(Reference = "Salmonella", y = Query.fasta, options = "--keeplength")
 }

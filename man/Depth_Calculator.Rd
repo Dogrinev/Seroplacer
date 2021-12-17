@@ -10,7 +10,7 @@ Depth_Calculator(Serovar, Dists, Serovar_Names)
 \item{Serovar}{A character string containing a serovar name.}
 
 \item{Dists}{A subset of the table of pairwise distances between all pairs of nodes in the phylogenetic tree.
-Calculated from dist.nodes {ape}. This subset of pairwise distances should contain specifically the distances
+Calculated from dist.nodes (ape). This subset of pairwise distances should contain specifically the distances
 between the MRCA and its descendants.}
 
 \item{Serovar_Names}{A character vector of all serovar names in the set of resulting hits.}

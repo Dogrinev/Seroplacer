@@ -4,15 +4,16 @@
 \alias{Data_Preparation}
 \title{Query and Reference Sequence Data Preparation}
 \usage{
-Data_Preparation(PathToAlignedQuery, Aligned_ReferenceFile)
+Data_Preparation(Aligned_Queries, Reference)
 }
 \arguments{
-\item{PathToAlignedQuery}{A file path leading to the directory containing the pre-aligned query sequences. This
-file should contain a set of 7 ASVs in a FASTA format file which have been aligned to the reference sequence
-database using MAFFT.}
+\item{Aligned_Queries}{A data frame containing the pre-aligned query sequences. Important: This file
+should contain a set of 7 ASVs in a data frame file which have been aligned to the reference sequence
+database using MAFFT. The data frame should be structured as 7 rows x 2 columns, with the first column
+containing sequence names and the second column containing nucleotide sequences.}
 
-\item{Aligned_ReferenceFile}{(Provided in package) Select the correct 16S sequence reference file for the
-organism being studied (Salmonella or E. coli).}
+\item{Reference}{An organism name (currently accepts "Salmonella" or "E.coli") which lets the function know
+which reference file to select. The reference sequence files are provided as part of the package.}
 }
 \value{
 A list with 2 elements containing the user's formatted sequences. List element 1 contains the concatenated

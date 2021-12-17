@@ -4,15 +4,13 @@
 \alias{Phylogeny_Plotting}
 \title{Phylogeny Plotting}
 \usage{
-Phylogeny_Plotting(MRCA, InitialTable, Tree)
+Phylogeny_Plotting(MRCA, Species)
 }
 \arguments{
 \item{MRCA}{An integer value for the node which is the final pendant adjusted MRCA.}
 
-\item{InitialTable}{A table used for coloring branches, provided as part of the Seroplacer package.}
-
-\item{Tree}{A phylogenetic tree representing the reference sequences in Newick format. This tree is provided as
-part of the Seroplacer package. This tree should be the original UNROOTED tree.}
+\item{Species}{A species name for the bacterial species being analyzed. This should be a text string, currently
+"Salmonella" and "E.coli" are accepted as possible species for EPA-NG analysis.}
 }
 \value{
 A phylogeny plot with the MRCA and descendants colored in red, representing the final clade of resulting hits.
@@ -30,5 +28,5 @@ resulting phylogeny figure. Larger dimensions will increase clarity and allow be
 image size.
 }
 \examples{
-Plot <- Phylogeny_Plotting(MRCA = 1352, InitialTable = ColoringTable, Tree = full.tree)
+Plot <- Phylogeny_Plotting(MRCA = 1352, Species = "Salmonella")
 }

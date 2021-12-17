@@ -4,7 +4,7 @@
 \alias{epa_ng_wrap}
 \title{Wrapper function for EPA-NG}
 \usage{
-epa_ng_wrap(exec, msa, tree, query, model, filter_max, file)
+epa_ng_wrap(exec, msa, query, Species, filter_max, file)
 }
 \arguments{
 \item{exec}{(Optional) The path on the machine in which the EPA-NG program is installed. This path will default to
@@ -13,14 +13,11 @@ the default installation path if left blank (/usr/local/bin/epa-ng).}
 \item{msa}{A reference multiple sequence alignment in FASTA format. For serovar prediction usage, this MSA should
 be in the form of concatenated sequences.}
 
-\item{tree}{A phylogenetic tree representing the reference sequences in Newick format. This tree is provided as
-part of the Seroplacer package.}
-
 \item{query}{A query sequence in FASTA format. For serovar prediction usage, this query sequence should be concatenated
 and pre-aligned to the MSA.}
 
-\item{model}{File containing the GTRGAMMA model parameters. This model file is provided as part of the Seroplacer
-package.}
+\item{Species}{A species name for the bacterial species being analyzed. This should be a text string, currently
+"Salmonella" and "E.coli" are accepted as possible species for EPA-NG analysis.}
 
 \item{filter_max}{(Optional) A number telling the EPA-NG function the maximum number of nodes to report in the
 placement results. We generally want to see all of the possible placement results, if left blank this option defaults
@@ -43,5 +40,5 @@ results. This wrapper is not currently designed to include all options available
 uses a limited range of required parameters.
 }
 \examples{
-Output.jplace<-epa_ng_wrap(msa = concatenated_references.fasta, tree = full.tree, query = query.fasta, model = info.raxml.bestModel, filter_max = 100)
+Output.jplace<-epa_ng_wrap(msa = concatenated_references.fasta, query = query.fasta, Species = "Salmonella", filter_max = 100)
 }

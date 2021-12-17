@@ -11,30 +11,34 @@
 #' is required that the input query sequences are pre-aligned to the main reference file using MAFFT. Non-aligned
 #' sequences with varying sequence lengths will cause errors in downstream analysis steps.
 #'
-#' @param PathToAlignedQuery A file path leading to the directory containing the pre-aligned query sequences. This
-#' file should contain a set of 7 ASVs in a FASTA format file which have been aligned to the reference sequence
-#' database using MAFFT.
+#' @param Aligned_Queries A data frame containing the pre-aligned query sequences. Important: This file
+#' should contain a set of 7 ASVs in a data frame file which have been aligned to the reference sequence
+#' database using MAFFT. The data frame should be structured as 7 rows x 2 columns, with the first column
+#' containing sequence names and the second column containing nucleotide sequences.
 #'
-#' @param Aligned_ReferenceFile (Provided in package) Select the correct 16S sequence reference file for the
-#' organism being studied (Salmonella or E. coli).
+#' @param Reference An organism name (currently accepts "Salmonella" or "E.coli") which lets the function know
+#' which reference file to select. The reference sequence files are provided as part of the package.
 #'
 #' @return A list with 2 elements containing the user's formatted sequences. List element 1 contains the concatenated
 #' query sequences. List element 2 contains the re-sorted and concatenated reference sequence file. Both of these
 #' will be used as inputs for the EPA-NG wrapper function.
 #'
-#' @importFrom Biostrings readDNAStringSet
+#' @importFrom purrr map
 #'
 #' @export
 #'
 #' @examples
 #' Sequence_Outputs<-Data_Preparation(PathToAlignedQuery = "/path/to/your/file.fasta",Aligned_ReferenceFile = Full_16s_Data_Aligned)
 
-Data_Preparation<-function(PathToAlignedQuery,Aligned_ReferenceFile)
+Data_Preparation<-function(Aligned_Queries,Reference)
 {
-  Aligned_fastaFile <- readDNAStringSet(PathToAlignedQuery,format = "fasta")
-  Aligned_seq_name = names(Aligned_fastaFile)
-  Aligned_sequence = paste(Aligned_fastaFile)
-  Aligned_Query_FASTA <- data.frame(Aligned_seq_name, Aligned_sequence,stringsAsFactors = FALSE)
+  Reference_Name<-match.arg(Reference,c("Salmonella","E.Coli"))
+  if(Reference_Name == "Salmonella")
+  {
+    Ref_File<-Seroplacer:::Full_16s_Data_Aligned
+  }
+  Aligned_ReferenceFile<-Ref_File
+  Aligned_Query_FASTA <- Aligned_Queries
   QTestSequence<-c(Aligned_Query_FASTA[1,2],Aligned_Query_FASTA[2,2],Aligned_Query_FASTA[3,2],Aligned_Query_FASTA[4,2],Aligned_Query_FASTA[5,2],Aligned_Query_FASTA[6,2],Aligned_Query_FASTA[7,2])
   #The placer function will optimize order of references for concatenating in the next step
   Concat_Orders<-map(.x = 1:1043,.f = ~Super_HAM_Placer(TestSequence = QTestSequence,ReferenceSequence = Aligned_ReferenceFile[[.]]))
@@ -65,11 +69,10 @@ Data_Preparation<-function(PathToAlignedQuery,Aligned_ReferenceFile)
 #' This wrapper is not currently designed to include all options contained in MAFFT since our implementation requires
 #' a specific set of parameters to be used.
 #'
-#' @param x A FASTA file containing the appropriate organism's multiple sequence alignment. These are pre-built and
-#' provided with the package, and the correct one must be selected. The user's query will be aligned matching this
-#' multiple sequence alignment.
+#' @param Reference An organism name (currently accepts "Salmonella" or "E.coli") which lets the function know
+#' which reference file to select. The reference sequence files are provided as part of the package.
 #'
-#' @param y A set of amplicon sequencing variants (ASVs) representing the 7 16S alleles. These are the query sequences
+#' @param Query A set of amplicon sequencing variants (ASVs) representing the 7 16S alleles. These are the query sequences
 #' which will be aligned to the multiple sequence alignment in x.
 #'
 #' @param exec (Optional) The path on the machine in which the MAFFT program is installed. This path will default to
@@ -84,21 +87,22 @@ Data_Preparation<-function(PathToAlignedQuery,Aligned_ReferenceFile)
 #'
 #' @param add Attaches the --add argument to the MAFFT command, setting the program to append the user's query sequences
 #' to the provided reference multiple sequence alignment. This command is required for merging the query sequences into
-#' the reference FASTA file.
+#' the reference FASTA file. If left blank this will by default use the --add argument.
 #'
 #' @return A multiple sequence alignment in FASTA format containing the reference sequences and the aligned query
 #' sequences appended as the last sequences in the file. The sequences in this alignment will be identical in length
 #' to the original reference multiple sequence alignment.
 #'
 #' @importFrom ips write.fas
+#' @importFrom Biostrings readDNAStringSet
 #' @importFrom ape read.dna
 #'
 #' @export
 #'
 #' @examples
-#' Output_FASTA<-mafft_wrap(x = Full_Alignment.fasta, y = Query.fasta, options = "--keeplength")
+#' Output_FASTA<-mafft_wrap(Reference = "Salmonella", y = Query.fasta, options = "--keeplength")
 
-mafft_wrap<-function(x, y, exec, options, file, add)
+mafft_wrap<-function(Reference, Query, exec, options, file, add)
 {
   os <- .Platform$OS
   if (missing(exec))
@@ -113,6 +117,11 @@ mafft_wrap<-function(x, y, exec, options, file, add)
     options <- paste(options, collapse = " ")
     options <- paste(rep(" ", 2), collapse = options)
   }
+  Reference_Name<-match.arg(Reference,c("Salmonella","E.Coli"))
+  if (Reference_Name == "Salmonella")
+  {
+    x<-Seroplacer:::Full_Alignment_Salmonella
+  }
   if (missing(add))
     add <- "add"
   add <- match.arg(add, c("add", "addprofile"))
@@ -122,7 +131,7 @@ mafft_wrap<-function(x, y, exec, options, file, add)
                                                tmpdir = tempdir(), fileext = ".fas")
   unlink(fns[file.exists(fns)])
   write.fas(x, fns[1])
-  write.fas(y, fns[2])
+  write.fas(Query, fns[2])
   call.mafft <- paste(exec, add, fns[2], options, fns[1],
                       ">", fns[3])
   if (os == "unix") {
@@ -150,6 +159,54 @@ mafft_wrap<-function(x, y, exec, options, file, add)
   }
 }
 
+#' Trimming Query Sequences from MAFFT
+#'
+#' This function will extract the aligned query sequences from the MAFFT alignment file. After initially aligning
+#' the query sequences to the pre-aligned reference sequence database, the last 7 sequences in the output FASTA
+#' file will be the newly aligned query sequences. This function will extract those 7 sequences and format them
+#' into the appropriate format for the Data_Preparation function. It is important to run this function as the Data
+#' Preparation function requires the sequences to be in a data frame, and not a DNAbin object or other format.
+#'
+#' @param MSA A multiple sequence alignment file outputted from the MAFFT alignment step. This MSA should contain
+#' a set of reference sequences with 7 appended query sequences at the end which will be extracted and reformatted.
+#'
+#' @param File (Optional) A path to which to save the aligned query sequences. If a path is provided, the queries
+#' will be saved as a .Rdata object with a data frame containing the query sequences.
+#'
+#' @return A data frame with 2 columns and 7 rows containing the names of the query sequences in the first column
+#' and the nucleotide sequences in the second column. These 7 sequences are the aligned queries submitted in the
+#' first MAFFT step of the protocol.
+#'
+#' @importFrom Biostrings readDNAStringSet
+#'
+#' @export
+#'
+#' @examples
+#' Aligned_Query_FASTA <- MSA_Trim(Output_FASTA)
+
+MSA_Trim<-function(MSA,File)
+{
+  fnst <- vector(length = 1)
+  fnst[1]<-tempfile(pattern = "msatrim", tmpdir = tempdir(), fileext = ".txt")
+  write.fas(MSA,fnst[1])
+  New_FASTA<-readDNAStringSet(filepath = fnst[1],format = "fasta")
+  FASTA_Names = names(New_FASTA)
+  FASTA_Sequences = paste(New_FASTA)
+  FASTA_Ready <- data.frame(FASTA_Names, FASTA_Sequences, stringsAsFactors = FALSE)
+  Length<-length(rownames(FASTA_Ready))
+  Query_Range<-Length-6
+  User_Queries<-FASTA_Ready[Query_Range:Length,]
+  rownames(User_Queries)<-NULL
+  if(missing(File))
+  {
+    return(User_Queries)
+  }
+  else
+  {
+    save(User_Queries,file = File)
+  }
+}
+
 #' Wrapper function for EPA-NG
 #'
 #' Creates an R interface for using the command line tool EPA-NG in an R environment. It is required that EPA-NG
@@ -166,14 +223,11 @@ mafft_wrap<-function(x, y, exec, options, file, add)
 #' @param msa A reference multiple sequence alignment in FASTA format. For serovar prediction usage, this MSA should
 #' be in the form of concatenated sequences.
 #'
-#' @param tree A phylogenetic tree representing the reference sequences in Newick format. This tree is provided as
-#' part of the Seroplacer package.
-#'
 #' @param query A query sequence in FASTA format. For serovar prediction usage, this query sequence should be concatenated
 #' and pre-aligned to the MSA.
 #'
-#' @param model File containing the GTRGAMMA model parameters. This model file is provided as part of the Seroplacer
-#' package.
+#' @param Species A species name for the bacterial species being analyzed. This should be a text string, currently
+#' "Salmonella" and "E.coli" are accepted as possible species for EPA-NG analysis.
 #'
 #' @param filter_max (Optional) A number telling the EPA-NG function the maximum number of nodes to report in the
 #' placement results. We generally want to see all of the possible placement results, if left blank this option defaults
@@ -192,27 +246,39 @@ mafft_wrap<-function(x, y, exec, options, file, add)
 #' @export
 #'
 #' @examples
-#' Output.jplace<-epa_ng_wrap(msa = concatenated_references.fasta, tree = full.tree, query = query.fasta, model = info.raxml.bestModel, filter_max = 100)
+#' Output.jplace<-epa_ng_wrap(msa = concatenated_references.fasta, query = query.fasta, Species = "Salmonella", filter_max = 100)
 
-epa_ng_wrap<-function(exec, msa, tree, query, model, filter_max, file)
+epa_ng_wrap<-function(exec, msa, query, Species, filter_max, file)
 {
   os <- .Platform$OS
   if (missing(exec))
     exec <- "/usr/local/bin/epa-ng"
+  Organism_Name<-match.arg(Species,c("Salmonella","E.coli"))
+  if (Organism_Name == "Salmonella")
+  {
+    tree<-Seroplacer:::vert.tree.correct
+    model<-Seroplacer:::Model_Salmonella
+  }
   if (missing(filter_max)){
     filter_max <- c("--filter-max 100")
   }
   else{
     filter_max_option <- paste("--filter-max ",filter_max,sep="")
   }
+  msa2<-msa
+  rownames(msa2)<-msa[,1]
+  msa2[,1]<-msa[,2]
+  query2<-query
+  rownames(query2)<-query[,1]
+  query2[,1]<-query[,2]
   fns <- vector(length = 5)
   for (i in seq_along(fns)) fns[i] <- tempfile(pattern = "epang",
                                                tmpdir = tempdir(), fileext = ".txt")
   fns[5]<-tempdir()
   unlink(fns[file.exists(fns)])
-  write.fas(msa,fns[1])
+  write.fas(msa2,fns[1])
   write.tree(tree,fns[2])
-  write.fas(query,fns[3])
+  write.fas(query2,fns[3])
   writeChar(model,fns[4],eos=NULL)
   JPlaceFile<-paste(fns[5],"/epa_result.jplace",sep="")
   call.epa_ng <- paste(exec, "--ref-msa", fns[1], "--tree",  fns[2], "--query", fns[3], "--model", fns[4], filter_max, "--redo --outdir", fns[5])
@@ -386,10 +452,13 @@ Concatenate_By_Order<-function(Order,RefSequence)
 #' length is small enough, it is possible that the MRCA will not change during pendant length adjustment.
 #' 6. All descendants of this pendant adjusted MRCA are considered the final results of the placement.
 #'
+#' @param JPlace_Object A JPlace file which is the output from EPA-NG. This file should contain the standard outputs
+#' from EPA-NG, including placement edges, likelihood weight ratios, and pendant lengths.
+#'
 #' @param Pendant_Multi An integer which is the multiplier by which to scale the pendant length adjustment in step 4.
 #'
-#' @param Tree A phylogenetic tree representing the reference sequences in Newick format. This tree is provided as
-#' part of the Seroplacer package.
+#' @param Species A species name for the bacterial species being analyzed. This should be a text string, currently
+#' "Salmonella" and "E.coli" are accepted as possible species for this analysis.
 #'
 #' @return An integer which is the node value in Tree of the final pendant-adjusted MRCA.
 #'
@@ -404,10 +473,14 @@ Concatenate_By_Order<-function(Order,RefSequence)
 #' @examples
 #' MRCA <- Clade_Hit_Finder_Pendant_Final(Pendant_Multi = 1.5, Tree = full.tree)
 
-Clade_Hit_Finder_Pendant_Final<-function(Pendant_Multi,Tree)
+Clade_Hit_Finder_Pendant_Final<-function(JPlace_Object,Pendant_Multi,Species)
 {
-  JPlace<-read.jplace("epa_result.jplace")
-  vert.tree<-Tree
+  JPlace<-JPlace_Object
+  Species_Name<-match.arg(Species,c("Salmonella","E.coli"))
+  if(Species_Name == "Salmonella")
+  {
+    vert.tree<-Seroplacer:::vert.tree.correct
+  }
   PlacedEdges<-JPlace@placements$node
   Node_Distances<-dist.nodes(x = vert.tree)
   PlacedEdges_List<-map(.x = 1:length(PlacedEdges),.f = ~Placement_Node_Selector(Distal_Node = PlacedEdges[.],Distal_Length = JPlace@placements$distal_length[.],Tree = vert.tree,Root = rootnode(vert.tree),Dist_Table = Node_Distances))
@@ -461,7 +534,7 @@ Clade_Hit_Finder_Pendant_Final<-function(Pendant_Multi,Tree)
 #' @param Root An integer value for the root node of the phylogenetic tree.
 #'
 #' @param Dist_Table A table of pairwise distances between all pairs of nodes in the phylogenetic tree. Calculated from
-#' dist.nodes {ape}.
+#' dist.nodes (ape).
 #'
 #' @return An integer value representing either the distal or proximal node adjacent to the node inserted by the
 #' placement algorthim
@@ -505,8 +578,8 @@ Placement_Node_Selector<-function(Distal_Node,Distal_Length,Tree,Root,Dist_Table
 #'
 #' @param MRCA An integer value for the node which is the final pendant adjusted MRCA.
 #'
-#' @param Tree A phylogenetic tree representing the reference sequences in Newick format. This tree is provided as
-#' part of the Seroplacer package.
+#' @param Species A species name for the bacterial species being analyzed. This should be a text string, currently
+#' "Salmonella" and "E.coli" are accepted as possible species for EPA-NG analysis.
 #'
 #' @return #A data table containing the following information for each resulting serovar:
 #' 1. The number of matches in the final resulting clade. 2. The fraction of total matches which that serovar
@@ -521,10 +594,15 @@ Placement_Node_Selector<-function(Distal_Node,Distal_Length,Tree,Root,Dist_Table
 #' @export
 #'
 #' @examples
-#' Serovar_Results_Table <- Placement_Results_Output(MRCA = 1352, Tree = full.tree)
+#' Serovar_Results_Table <- Placement_Results_Output(MRCA = 1352, Species = "Salmonella")
 
-Placement_Results_Output<-function(MRCA,Tree)
+Placement_Results_Output<-function(MRCA,Species)
 {
+  Species_Name<-match.arg(Species,c("Salmonella","E.coli"))
+  if(Species_Name == "Salmonella")
+  {
+    Tree<-Seroplacer:::vert.tree.correct
+  }
   Descendant_List<-Descendants(x = Tree,node = MRCA)
   Descendants_Vec<-unlist(Descendant_List)
   Descendant_Assemblies<-Tree$tip.label[Descendants_Vec]
@@ -555,7 +633,7 @@ Placement_Results_Output<-function(MRCA,Tree)
 #' @param Serovar A character string containing a serovar name.
 #'
 #' @param Dists A subset of the table of pairwise distances between all pairs of nodes in the phylogenetic tree.
-#' Calculated from dist.nodes {ape}. This subset of pairwise distances should contain specifically the distances
+#' Calculated from dist.nodes (ape). This subset of pairwise distances should contain specifically the distances
 #' between the MRCA and its descendants.
 #'
 #' @param Serovar_Names A character vector of all serovar names in the set of resulting hits.
@@ -585,8 +663,8 @@ Depth_Calculator<-function(Serovar,Dists,Serovar_Names)
 #'
 #' @param MRCA An integer value for the node which is the final pendant adjusted MRCA.
 #'
-#' @param Tree A phylogenetic tree representing the reference sequences in Newick format. This tree is provided as
-#' part of the Seroplacer package.
+#' @param Species A species name for the bacterial species being analyzed. This should be a text string, currently
+#' "Salmonella" and "E.coli" are accepted as possible species for EPA-NG analysis.
 #'
 #' @return #A data table containing the following information for each resulting serovar:
 #' 1. The number of matches in the final resulting clade. 2. The fraction of total matches which that serovar
@@ -601,10 +679,15 @@ Depth_Calculator<-function(Serovar,Dists,Serovar_Names)
 #' @export
 #'
 #' @examples
-#' Serovar_Results_Table_Full <- Placement_Results_Output(MRCA = 1352, Tree = full.tree)
+#' Serovar_Results_Table_Full <- Placement_Results_Output(MRCA = 1352, Species = "Salmonella")
 
-Placement_Results_Output_Full<-function(MRCA,Tree)
+Placement_Results_Output_Full<-function(MRCA,Species)
 {
+  Species_Name<-match.arg(Species,c("Salmonella","E.coli"))
+  if(Species_Name == "Salmonella")
+  {
+    Tree<-Seroplacer:::vert.tree.correct
+  }
   Descendant_List<-Descendants(x = Tree,node = MRCA)
   Descendants_Vec<-unlist(Descendant_List)
   Descendant_Assemblies<-Tree$tip.label[Descendants_Vec]
@@ -686,10 +769,8 @@ no_legend <- function() {theme(legend.position="none")}
 #'
 #' @param MRCA An integer value for the node which is the final pendant adjusted MRCA.
 #'
-#' @param InitialTable A table used for coloring branches, provided as part of the Seroplacer package.
-#'
-#' @param Tree A phylogenetic tree representing the reference sequences in Newick format. This tree is provided as
-#' part of the Seroplacer package. This tree should be the original UNROOTED tree.
+#' @param Species A species name for the bacterial species being analyzed. This should be a text string, currently
+#' "Salmonella" and "E.coli" are accepted as possible species for EPA-NG analysis.
 #'
 #' @return A phylogeny plot with the MRCA and descendants colored in red, representing the final clade of resulting hits.
 #'
@@ -699,18 +780,27 @@ no_legend <- function() {theme(legend.position="none")}
 #' @importFrom ggtree ggtree
 #' @importFrom ggtree %<+%
 #' @importFrom ggtree geom_tiplab
+#' @importFrom ggtree xlim
+#' @importFrom ggplot2 aes
+#' @importFrom ggplot2 unit
 #'
 #' @export
 #'
 #' @examples
-#' Plot <- Phylogeny_Plotting(MRCA = 1352, InitialTable = ColoringTable, Tree = full.tree)
+#' Plot <- Phylogeny_Plotting(MRCA = 1352, Species = "Salmonella")
 
-Phylogeny_Plotting<-function(MRCA,InitialTable,Tree)
+Phylogeny_Plotting<-function(MRCA,Species)
 {
+  Species_Name<-match.arg(Species,c("Salmonella","E.coli"))
+  if(Species_Name == "Salmonella")
+  {
+    Tree<-Seroplacer:::vert.tree.correct
+  }
+  InitialTable<-Seroplacer:::ColoringTable
   Hits<-unlist(Descendants(x = Tree,node = MRCA))
   TipNames<-vert.tree.correct$tip.label[Hits]
-  Rooted_TipNumbers<-which(rooted.vert.tree$tip.label %in% TipNames)
-  Ancestor_List<-map(.x = Rooted_TipNumbers,.f = ~unlist(Ancestors(rooted.vert.tree,node = .)))
+  Rooted_TipNumbers<-which(Seroplacer:::rooted.vert.tree$tip.label %in% TipNames)
+  Ancestor_List<-map(.x = Rooted_TipNumbers,.f = ~unlist(Ancestors(Seroplacer:::rooted.vert.tree,node = .)))
   Sum_List<-as.list(NULL)
   for(j in 1:length(Ancestor_List[[1]]))
   {
@@ -721,10 +811,10 @@ Phylogeny_Plotting<-function(MRCA,InitialTable,Tree)
   Result_Vec_NoNA<-Result_Vec[!is.na(Result_Vec)]
   Target_Value<-min(Result_Vec_NoNA)
   Closest_Parent_Node<-Ancestor_List[[1]][which(Result_Vec==Target_Value)]
-  EdgesToColor<-Descendants(x=rooted.vert.tree,node = Closest_Parent_Node,type = "all")
+  EdgesToColor<-Descendants(x=Seroplacer:::rooted.vert.tree,node = Closest_Parent_Node,type = "all")
   InitialTable[which(InitialTable[,1] %in% EdgesToColor),2]<-"red"
   InitialTable$node<-as.integer(InitialTable$node)
-  p <- ggtree(rooted.vert.tree,layout = "circular") +
+  p <- ggtree(Seroplacer:::rooted.vert.tree,layout = "circular") +
     xlim(-0.5,5) +
     no_legend()
   p2 <- p %<+% TaxID_Table3 +

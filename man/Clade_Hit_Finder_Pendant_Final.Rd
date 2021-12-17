@@ -4,13 +4,16 @@
 \alias{Clade_Hit_Finder_Pendant_Final}
 \title{MRCA Calculation From Placement Data}
 \usage{
-Clade_Hit_Finder_Pendant_Final(Pendant_Multi, Tree)
+Clade_Hit_Finder_Pendant_Final(JPlace_Object, Pendant_Multi, Species)
 }
 \arguments{
+\item{JPlace_Object}{A JPlace file which is the output from EPA-NG. This file should contain the standard outputs
+from EPA-NG, including placement edges, likelihood weight ratios, and pendant lengths.}
+
 \item{Pendant_Multi}{An integer which is the multiplier by which to scale the pendant length adjustment in step 4.}
 
-\item{Tree}{A phylogenetic tree representing the reference sequences in Newick format. This tree is provided as
-part of the Seroplacer package.}
+\item{Species}{A species name for the bacterial species being analyzed. This should be a text string, currently
+"Salmonella" and "E.coli" are accepted as possible species for this analysis.}
 }
 \value{
 An integer which is the node value in Tree of the final pendant-adjusted MRCA.

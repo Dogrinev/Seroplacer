@@ -10,13 +10,13 @@ resulting serovars in a data table. This version of the results generation will 
 below 5% representation in the final clade. For a complete view of the results, use Placement_Results_Output_Full
 instead.}
 \usage{
-Placement_Results_Output(MRCA, Tree)
+Placement_Results_Output(MRCA, Species)
 }
 \arguments{
 \item{MRCA}{An integer value for the node which is the final pendant adjusted MRCA.}
 
-\item{Tree}{A phylogenetic tree representing the reference sequences in Newick format. This tree is provided as
-part of the Seroplacer package.}
+\item{Species}{A species name for the bacterial species being analyzed. This should be a text string, currently
+"Salmonella" and "E.coli" are accepted as possible species for EPA-NG analysis.}
 }
 \value{
 #A data table containing the following information for each resulting serovar:
@@ -35,5 +35,5 @@ below 5% representation in the final clade. For a complete view of the results, 
 instead.
 }
 \examples{
-Serovar_Results_Table <- Placement_Results_Output(MRCA = 1352, Tree = full.tree)
+Serovar_Results_Table <- Placement_Results_Output(MRCA = 1352, Species = "Salmonella")
 }

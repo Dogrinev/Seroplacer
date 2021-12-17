@@ -9,13 +9,13 @@ clade MRCA, and this function will analyze the resulting hits (all descendants o
 resulting serovars in a data table. This version of the results generation will not trim any serovars with low
 representation. This will report all serovars for any hits found below the final pendant adjusted MRCA.}
 \usage{
-Placement_Results_Output_Full(MRCA, Tree)
+Placement_Results_Output_Full(MRCA, Species)
 }
 \arguments{
 \item{MRCA}{An integer value for the node which is the final pendant adjusted MRCA.}
 
-\item{Tree}{A phylogenetic tree representing the reference sequences in Newick format. This tree is provided as
-part of the Seroplacer package.}
+\item{Species}{A species name for the bacterial species being analyzed. This should be a text string, currently
+"Salmonella" and "E.coli" are accepted as possible species for EPA-NG analysis.}
 }
 \value{
 #A data table containing the following information for each resulting serovar:
@@ -33,5 +33,5 @@ resulting serovars in a data table. This version of the results generation will 
 representation. This will report all serovars for any hits found below the final pendant adjusted MRCA.
 }
 \examples{
-Serovar_Results_Table_Full <- Placement_Results_Output(MRCA = 1352, Tree = full.tree)
+Serovar_Results_Table_Full <- Placement_Results_Output(MRCA = 1352, Species = "Salmonella")
 }

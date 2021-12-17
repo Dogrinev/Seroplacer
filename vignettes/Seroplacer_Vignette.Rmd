@@ -1,0 +1,94 @@
+---
+title: "Introduction to Seroplacer"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Seroplacer_Vignette}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+**Package Loading**
+
+```{r, setup}
+library(Seroplacer)
+Query_Sequences<-Query_Example
+```
+
+We will walk through an example placement of a set of query sequences. This query consists of 7 16S bacterial amplicon sequencing variants (ASVs) which are contained in a FASTA file. This is the only file needed to get started with using Seroplacer and attempting to make a serovar prediction based on a set of ASVs. This particular set of ASVs is highly similar to serovar Enteritidis from *Salmonella Enterica*. 
+
+**MAFFT Alignment**
+
+The first step is to prepare an aligned version of the input sequences. These will be done with the MAFFT tool. Installation instructions for Mac OS X and Windows can be found at <https://mafft.cbrc.jp/alignment/software/source.html>. After installation, we will use a MAFFT wrapper function to work with aligning the sequences in an R environment. It is required that the command line MAFFT tool is installed on your machine and the path leading to it is determined. After that, it is possible to use the wrapper function entirely in R in order to process the query sequence data.
+
+```{r, MAFFT Alignment}
+Queries_Aligned_To_MSA<-mafft_wrap(Reference = "Salmonella",Query = Query_Sequences,options = "--keeplength")
+Trimmed<-MSA_Trim(MSA = Queries_Aligned_To_MSA)
+```
+
+**FASTA Data Preparation** 
+
+The next step is to prepare the sequences for input into the placement algorithm (EPA-NG). For this, the reference sequences need to be re-arranged into the best order which matches the query sequence alleles. After this, the 7 query alleles need to be concatenated, along with all groups of 7 reference alleles. The data preparation function will organize the data and output a list of 2 elements containing the concatenated reference database, and the concatenated query allele, both in proper format for input into EPA-NG.
+
+```{r, Data Preparation}
+Prepared_Sequences<-Data_Preparation(Aligned_Queries = Trimmed,Reference = "Salmonella")
+```
+
+**Sequence Placement using EPA-NG**
+
+The evolutionary placement algorithm (EPA-NG) will be used to best place the concatenated query sequences into the correct phylogenetic location among the concatenated 16S reference alleles. 
+
+```{r, EPA-NG}
+JPlace_Result<-epa_ng_wrap(msa = Prepared_Sequences[[2]],query = Prepared_Sequences[[1]],Species = "Salmonella")
+```
+
+**Calculation of Pendant Adjusted Clade**
+
+This function will use the EPA-NG jplace output file in order to calculate an MRCA from the placement results. The MRCA reported here is used in further calculations to predict the serovar and plot the actual phylogeny for visualization. 
+
+```{r, Clade Calculation}
+MRCA_Node<-Clade_Hit_Finder_Pendant_Final(JPlace_Object = JPlace_Result,Pendant_Multi = 1.5,Species = "Salmonella")
+```
+
+**Serovar Results Table**
+
+This function will generate a shortened list of serovar results, removing any serovars below 5% representation. This function will output a table containing the following information for each resulting serovar: 1. The number of matches in the final resulting clade 2. The fraction of total matches which that serovar represents 3. The maximum depth, or the distance from the MRCA to the farthest hit in the clade (calculated for each serovar) 4. The sum of branch lengths, or the total sum of branch lengths from each hit to the MRCA (calculated for each serovar)
+
+```{r, Short Serovar Table}
+Placement_Results_Table<-Placement_Results_Output(MRCA = MRCA_Node,Species = "Salmonella")
+Placement_Results_Table
+```
+
+**Full Serovar Results Table**
+
+Alternatively, a full serovar report can be obtained by running the alternative function below. In order to see all results including low percentage results which are trimmed in the previous function, the following function should be used.
+
+```{r, Full Serovar Table}
+Full_Placement_Results_Table<-Placement_Results_Output_Full(MRCA = MRCA_Node,Species = "Salmonella")
+Full_Placement_Results_Table
+```
+
+**Serovar Result**
+
+This function will report the predicted serovar if there is a dominant serovar representing >30% of the results observed.
+
+```{r, Serovar Result View}
+Serovar_Prediction<-Sero_Result(Sero = Full_Placement_Results_Table)
+head(Serovar_Prediction)
+```
+
+**Phylogeny Plot of Results**
+
+The following function will generate a circular phylogeny plot for easier visualization and color the path from the clade MRCA to the resulting hits in red. After running the phylogeny plotting function below, plot the Phylogeny_Plot object to generate the actual plot. Because of the size of the actual phylogeny, it is reccomended to save the resulting plot as a PNG in dimensions of at least 15,000 x 15,000 pixels. An outside viewer should be used to open the PNG and zoom in to analyze the resulting phylogeny figure. Larger dimensions will increase clarity and allow better zooming at the cost of larger image size. 
+
+```{r, Phylogeny Plot}
+Plot_Output<-Phylogeny_Plotting(MRCA = MRCA_Node,Species = "Salmonella")
+Plot_Output
+```
+
