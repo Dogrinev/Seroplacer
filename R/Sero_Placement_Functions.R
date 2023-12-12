@@ -9,7 +9,9 @@
 #' the reference sequences are all concatenated and returned in a format ready for EPA-NG. In addition, the user's
 #' input query sequences are also concatenated and returned as a single FASTA line for input into EPA-NG. Note: It
 #' is required that the input query sequences are pre-aligned to the main reference file using MAFFT. Non-aligned
-#' sequences with varying sequence lengths will cause errors in downstream analysis steps.
+#' sequences with varying sequence lengths will cause errors in downstream analysis steps. The mafft wrapper and epa-ng
+#' are adapted from wrapper functions from the "ips" package written by Cristoph Heibl. We would like to thank the
+#' authors for their work on this previously written code.
 #'
 #' @param Aligned_Queries A data frame containing the pre-aligned query sequences. Important: This file
 #' should contain a set of 7 ASVs in a data frame file which have been aligned to the reference sequence
@@ -35,15 +37,23 @@ Data_Preparation<-function(Aligned_Queries,Reference)
   Reference_Name<-match.arg(Reference,c("Salmonella","E.Coli"))
   if(Reference_Name == "Salmonella")
   {
-    Ref_File<-Seroplacer:::Full_16s_Data_Aligned
+    Ref_File<-Seroplacer:::Full_16s_Data_Aligned_SE
+    Range<-1:1618
+    GFFs_Reference<-Seroplacer:::Tree_Assemblies_SE
+  }
+  if(Reference_Name == "E.Coli")
+  {
+    Ref_File<-Seroplacer:::Full_16s_Data_Aligned_EC
+    Range<-1:2791
+    GFFs_Reference<-Seroplacer:::Tree_Assemblies_EC
   }
   Aligned_ReferenceFile<-Ref_File
   Aligned_Query_FASTA <- Aligned_Queries
   QTestSequence<-c(Aligned_Query_FASTA[1,2],Aligned_Query_FASTA[2,2],Aligned_Query_FASTA[3,2],Aligned_Query_FASTA[4,2],Aligned_Query_FASTA[5,2],Aligned_Query_FASTA[6,2],Aligned_Query_FASTA[7,2])
   #The placer function will optimize order of references for concatenating in the next step
-  Concat_Orders<-map(.x = 1:1043,.f = ~Super_HAM_Placer(TestSequence = QTestSequence,ReferenceSequence = Aligned_ReferenceFile[[.]]))
+  Concat_Orders<-map(.x = Range,.f = ~Super_HAM_Placer(TestSequence = QTestSequence,ReferenceSequence = Aligned_ReferenceFile[[.]]))
   #This function will concatenate the reference 16s alleles based on their order pulled from above
-  Concatenated_References<-map(.x = 1:1043,.f = ~Concatenate_By_Order(Order = Concat_Orders[[.]],RefSequence = Aligned_ReferenceFile[[.]]))
+  Concatenated_References<-map(.x = Range,.f = ~Concatenate_By_Order(Order = Concat_Orders[[.]],RefSequence = Aligned_ReferenceFile[[.]]))
   Prep_For_FASTA<-as.data.frame(unlist(Concatenated_References))
   Prep_For_FASTA2<-cbind(GFFs_Reference,Prep_For_FASTA)
   colnames(Prep_For_FASTA2)<-c("seq.name","seq.text")
@@ -67,7 +77,9 @@ Data_Preparation<-function(Aligned_Queries,Reference)
 #' The input sequences will be aligned with their lengths adjusted to match the reference multiple sequence
 #' alignment (MSA). The input sequences will then be appended to the end of the MSA for use in downstream analysis.
 #' This wrapper is not currently designed to include all options contained in MAFFT since our implementation requires
-#' a specific set of parameters to be used.
+#' a specific set of parameters to be used. The code we used for this package is modified from similar wrapper functions
+#' from the R package "ips" by Christoph Heibl. We thank the previous authors for this work and have built upon their
+#' wrapper functions for mafft and epa-ng in this software.
 #'
 #' @param Reference An organism name (currently accepts "Salmonella" or "E.coli") which lets the function know
 #' which reference file to select. The reference sequence files are provided as part of the package.
@@ -120,7 +132,11 @@ mafft_wrap<-function(Reference, Query, exec, options, file, add)
   Reference_Name<-match.arg(Reference,c("Salmonella","E.Coli"))
   if (Reference_Name == "Salmonella")
   {
-    x<-Seroplacer:::Full_Alignment_Salmonella
+    x<-Seroplacer:::Full_Alignment_SE
+  }
+  if (Reference_Name == "E.Coli")
+  {
+    x<-Seroplacer:::Full_Alignment_EC
   }
   if (missing(add))
     add <- "add"
@@ -253,11 +269,16 @@ epa_ng_wrap<-function(exec, msa, query, Species, filter_max, file)
   os <- .Platform$OS
   if (missing(exec))
     exec <- "/usr/local/bin/epa-ng"
-  Organism_Name<-match.arg(Species,c("Salmonella","E.coli"))
+  Organism_Name<-match.arg(Species,c("Salmonella","E.Coli"))
   if (Organism_Name == "Salmonella")
   {
-    tree<-Seroplacer:::vert.tree.correct
-    model<-Seroplacer:::Model_Salmonella
+    tree<-Seroplacer:::vert.tree.SE_Final
+    model<-Seroplacer:::Model_SE
+  }
+  if (Organism_Name == "E.Coli")
+  {
+    tree<-Seroplacer:::vert.tree.EC_Final
+    model<-Seroplacer:::Model_EC
   }
   if (missing(filter_max)){
     filter_max <- c("--filter-max 100")
@@ -340,8 +361,12 @@ Super_HAM_Placer<-function(TestSequence,ReferenceSequence)
   Row6<-map_int(.x = 1:7,.f = ~string.diff(a = TestSequence[.],b = ReferenceSequence[7],exclude = c("n","N","?"),ignore.case = TRUE))
   Row7<-map_int(.x = 1:7,.f = ~string.diff(a = TestSequence[.],b = ReferenceSequence[8],exclude = c("n","N","?"),ignore.case = TRUE))
   Hamming_Table_Result<-rbind(Row1,Row2,Row3,Row4,Row5,Row6,Row7)
-  Combination_Integers<-map_int(.x = 1:5040,.f = ~Super_HAM_Combinator(Hamming_Table = Hamming_Table_Result,Combination = as.integer(CombinationTable[.,])))
-  Best_Order<-as.integer(CombinationTable[which(Combination_Integers==min(Combination_Integers))[1],])
+  misms <- apply(cmb, 1, function(ii, dd=Hamming_Table_Result) {
+    sum(dd[1,ii[[1]]], dd[2,ii[[2]]], dd[3,ii[[3]]],
+        dd[4,ii[[4]]], dd[5,ii[[5]]], dd[6,ii[[6]]],
+        dd[7,ii[[7]]])
+  })
+  Best_Order<-as.integer(cmb[which(misms==min(misms))[1],])
   return(Best_Order)
 }
 
@@ -476,10 +501,14 @@ Concatenate_By_Order<-function(Order,RefSequence)
 Clade_Hit_Finder_Pendant_Final<-function(JPlace_Object,Pendant_Multi,Species)
 {
   JPlace<-JPlace_Object
-  Species_Name<-match.arg(Species,c("Salmonella","E.coli"))
+  Species_Name<-match.arg(Species,c("Salmonella","E.Coli"))
   if(Species_Name == "Salmonella")
   {
-    vert.tree<-Seroplacer:::vert.tree.correct
+    vert.tree<-Seroplacer:::vert.tree.SE_Final
+  }
+  if(Species_Name == "E.Coli")
+  {
+    vert.tree<-Seroplacer:::vert.tree.EC_Final
   }
   PlacedEdges<-JPlace@placements$node
   Node_Distances<-dist.nodes(x = vert.tree)
@@ -598,20 +627,26 @@ Placement_Node_Selector<-function(Distal_Node,Distal_Length,Tree,Root,Dist_Table
 
 Placement_Results_Output<-function(MRCA,Species)
 {
-  Species_Name<-match.arg(Species,c("Salmonella","E.coli"))
+  Species_Name<-match.arg(Species,c("Salmonella","E.Coli"))
   if(Species_Name == "Salmonella")
   {
-    Tree<-Seroplacer:::vert.tree.correct
+    Tree<-Seroplacer:::vert.tree.SE_Final
+    GTD_Sero_Predict_Clean2<-Seroplacer:::SerovarTable_Final_SE
+  }
+  if(Species_Name == "E.Coli")
+  {
+    Tree<-Seroplacer:::vert.tree.EC_Final
+    GTD_Sero_Predict_Clean2<-Seroplacer:::SerovarTable_Final_EC
   }
   Descendant_List<-Descendants(x = Tree,node = MRCA)
   Descendants_Vec<-unlist(Descendant_List)
   Descendant_Assemblies<-Tree$tip.label[Descendants_Vec]
-  Descendant_Serovars<-GTD_Sero_Predict_Clean2[which(GTD_Sero_Predict_Clean2$Assembly %in% Descendant_Assemblies),3]
+  Descendant_Serovars<-GTD_Sero_Predict_Clean2[which(GTD_Sero_Predict_Clean2$Assembly %in% Descendant_Assemblies),2]
   Descendant_Serovars_NoNA<-Descendant_Serovars[which(Descendant_Serovars!="")]
   Serovar_Report<-names(table(Descendant_Serovars_NoNA))
   Sero_Percentages<-unlist(map(.x = Serovar_Report,.f = ~length(which(Descendant_Serovars %in% .))/length(Descendant_Serovars)))
   Sero_Numbers<-unlist(map(.x = Serovar_Report,.f = ~length(which(Descendant_Serovars %in% .))))
-  Node_Distances<-dist.nodes(vert.tree.correct)
+  Node_Distances<-dist.nodes(Tree)
   Distances<-Node_Distances[MRCA,Descendants_Vec]
   Depth_Results<-map(.x = Serovar_Report,.f = ~Depth_Calculator(Serovar = .,Dists = Distances,Serovar_Names = Descendant_Serovars))
   Depth_Results_Cols<-data.frame(t(matrix(unlist(Depth_Results),nrow=2)))
@@ -683,20 +718,26 @@ Depth_Calculator<-function(Serovar,Dists,Serovar_Names)
 
 Placement_Results_Output_Full<-function(MRCA,Species)
 {
-  Species_Name<-match.arg(Species,c("Salmonella","E.coli"))
+  Species_Name<-match.arg(Species,c("Salmonella","E.Coli"))
   if(Species_Name == "Salmonella")
   {
-    Tree<-Seroplacer:::vert.tree.correct
+    Tree<-Seroplacer:::vert.tree.SE_Final
+    GTD_Sero_Predict_Clean2<-Seroplacer:::SerovarTable_Final_SE
+  }
+  if(Species_Name == "E.Coli")
+  {
+    Tree<-Seroplacer:::vert.tree.EC_Final
+    GTD_Sero_Predict_Clean2<-Seroplacer:::SerovarTable_Final_EC
   }
   Descendant_List<-Descendants(x = Tree,node = MRCA)
   Descendants_Vec<-unlist(Descendant_List)
   Descendant_Assemblies<-Tree$tip.label[Descendants_Vec]
-  Descendant_Serovars<-GTD_Sero_Predict_Clean2[which(GTD_Sero_Predict_Clean2$Assembly %in% Descendant_Assemblies),3]
+  Descendant_Serovars<-GTD_Sero_Predict_Clean2[which(GTD_Sero_Predict_Clean2$Assembly %in% Descendant_Assemblies),2]
   Descendant_Serovars_NoNA<-Descendant_Serovars[which(Descendant_Serovars!="")]
   Serovar_Report<-names(table(Descendant_Serovars_NoNA))
   Sero_Percentages<-unlist(map(.x = Serovar_Report,.f = ~length(which(Descendant_Serovars %in% .))/length(Descendant_Serovars)))
   Sero_Numbers<-unlist(map(.x = Serovar_Report,.f = ~length(which(Descendant_Serovars %in% .))))
-  Node_Distances<-dist.nodes(vert.tree.correct)
+  Node_Distances<-dist.nodes(Tree)
   Distances<-Node_Distances[MRCA,Descendants_Vec]
   Depth_Results<-map(.x = Serovar_Report,.f = ~Depth_Calculator(Serovar = .,Dists = Distances,Serovar_Names = Descendant_Serovars))
   Depth_Results_Cols<-data.frame(t(matrix(unlist(Depth_Results),nrow=2)))
@@ -791,16 +832,25 @@ no_legend <- function() {theme(legend.position="none")}
 
 Phylogeny_Plotting<-function(MRCA,Species)
 {
-  Species_Name<-match.arg(Species,c("Salmonella","E.coli"))
+  Species_Name<-match.arg(Species,c("Salmonella","E.Coli"))
   if(Species_Name == "Salmonella")
   {
-    Tree<-Seroplacer:::vert.tree.correct
+    Tree<-Seroplacer:::vert.tree.SE_Final
+    InitialTable<-Seroplacer:::ColoringTable_SE
+    rooted.vert.tree<-Seroplacer:::vert.tree.SE_rooted
+    TaxID_Table3<-Seroplacer:::SerovarTable_Final_SE
   }
-  InitialTable<-Seroplacer:::ColoringTable
+  if(Species_Name == "E.Coli")
+  {
+    Tree<-Seroplacer:::vert.tree.EC_Final
+    InitialTable<-Seroplacer:::ColoringTable_EC
+    rooted.vert.tree<-Seroplacer:::vert.tree.EC_rooted
+    TaxID_Table3<-Seroplacer:::SerovarTable_Final_EC
+  }
   Hits<-unlist(Descendants(x = Tree,node = MRCA))
-  TipNames<-vert.tree.correct$tip.label[Hits]
-  Rooted_TipNumbers<-which(Seroplacer:::rooted.vert.tree$tip.label %in% TipNames)
-  Ancestor_List<-map(.x = Rooted_TipNumbers,.f = ~unlist(Ancestors(Seroplacer:::rooted.vert.tree,node = .)))
+  TipNames<-Tree$tip.label[Hits]
+  Rooted_TipNumbers<-which(rooted.vert.tree$tip.label %in% TipNames)
+  Ancestor_List<-map(.x = Rooted_TipNumbers,.f = ~unlist(Ancestors(rooted.vert.tree,node = .)))
   Sum_List<-as.list(NULL)
   for(j in 1:length(Ancestor_List[[1]]))
   {
@@ -811,10 +861,10 @@ Phylogeny_Plotting<-function(MRCA,Species)
   Result_Vec_NoNA<-Result_Vec[!is.na(Result_Vec)]
   Target_Value<-min(Result_Vec_NoNA)
   Closest_Parent_Node<-Ancestor_List[[1]][which(Result_Vec==Target_Value)]
-  EdgesToColor<-Descendants(x=Seroplacer:::rooted.vert.tree,node = Closest_Parent_Node,type = "all")
+  EdgesToColor<-Descendants(x=rooted.vert.tree,node = Closest_Parent_Node,type = "all")
   InitialTable[which(InitialTable[,1] %in% EdgesToColor),2]<-"red"
   InitialTable$node<-as.integer(InitialTable$node)
-  p <- ggtree(Seroplacer:::rooted.vert.tree,layout = "circular") +
+  p <- ggtree(rooted.vert.tree,layout = "circular") +
     xlim(-0.5,5) +
     no_legend()
   p2 <- p %<+% TaxID_Table3 +

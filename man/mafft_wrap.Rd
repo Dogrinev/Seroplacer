@@ -41,7 +41,9 @@ the user's input query sequences and align them to a previously aligned referenc
 The input sequences will be aligned with their lengths adjusted to match the reference multiple sequence
 alignment (MSA). The input sequences will then be appended to the end of the MSA for use in downstream analysis.
 This wrapper is not currently designed to include all options contained in MAFFT since our implementation requires
-a specific set of parameters to be used.
+a specific set of parameters to be used. The code we used for this package is modified from similar wrapper functions
+from the R package "ips" by Christoph Heibl. We thank the previous authors for this work and have built upon their
+wrapper functions for mafft and epa-ng in this software.
 }
 \examples{
 Output_FASTA<-mafft_wrap(Reference = "Salmonella", y = Query.fasta, options = "--keeplength")

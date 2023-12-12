@@ -28,7 +28,9 @@ each reference is calculated and then the reference sequences are re-sorted into
 the reference sequences are all concatenated and returned in a format ready for EPA-NG. In addition, the user's
 input query sequences are also concatenated and returned as a single FASTA line for input into EPA-NG. Note: It
 is required that the input query sequences are pre-aligned to the main reference file using MAFFT. Non-aligned
-sequences with varying sequence lengths will cause errors in downstream analysis steps.
+sequences with varying sequence lengths will cause errors in downstream analysis steps. The mafft wrapper and epa-ng
+are adapted from wrapper functions from the "ips" package written by Cristoph Heibl. We would like to thank the
+authors for their work on this previously written code.
 }
 \examples{
 Sequence_Outputs<-Data_Preparation(PathToAlignedQuery = "/path/to/your/file.fasta",Aligned_ReferenceFile = Full_16s_Data_Aligned)

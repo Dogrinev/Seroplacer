@@ -23,6 +23,13 @@ Query_Sequences<-Query_Example
 
 We will walk through an example placement of a set of query sequences. This query consists of 7 16S bacterial amplicon sequencing variants (ASVs) which are contained in a FASTA file. This is the only file needed to get started with using Seroplacer and attempting to make a serovar prediction based on a set of ASVs. This particular set of ASVs is highly similar to serovar Enteritidis from *Salmonella Enterica*. 
 
+```{r, setup_alternative,eval=FALSE}
+library(ape)
+Query_Sequences<-read.dna(file = "/PATH/TO/YOUR/FILE/data.fasta",format = "fasta",as.matrix = FALSE)
+```
+
+If you are loading in a set of fresh sequence from a raw FASTA file, we recommend using the R package "ape" to load in the FASTA file in the form of a list DNAbin object. The read.dna function from "ape" will load in the correct format which will be appropriate for input into the next steps of the algorithm. 
+
 **MAFFT Alignment**
 
 The first step is to prepare an aligned version of the input sequences. These will be done with the MAFFT tool. Installation instructions for Mac OS X and Windows can be found at <https://mafft.cbrc.jp/alignment/software/source.html>. After installation, we will use a MAFFT wrapper function to work with aligning the sequences in an R environment. It is required that the command line MAFFT tool is installed on your machine and the path leading to it is determined. After that, it is possible to use the wrapper function entirely in R in order to process the query sequence data.
