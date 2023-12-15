@@ -6,7 +6,7 @@ Please see our [vignette](https://dogrinev.github.io/Seroplacer_Vignette.html) f
 
 ## Installation
 
-The easiest way to install Seroplacer is through source code installation direction through Github:
+The easiest way to install Seroplacer is through source code installation directly through Github:
 
 ```
 library(devtools)
